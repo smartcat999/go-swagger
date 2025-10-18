@@ -13,21 +13,22 @@ import (
 
 // APIDefinition stores complete API definition information
 type APIDefinition struct {
-	Method       string                 // HTTP method
-	Path         string                 // Route path
-	OperationID  string                 // Unique operation ID
-	Summary      string                 // API summary
-	Description  string                 // API detailed description
-	Tags         []string               // API tag groups
-	Request      interface{}            // Request structure
-	Response     interface{}            // Response structure
-	Params       []Parameter            // Path parameters, query parameters, etc.
-	Handler      http.HandlerFunc       // Actual handler function
-	Deprecated   bool                   // Whether the API is deprecated
-	Security     []map[string][]string  // Security requirements
-	ExternalDocs *ExternalDocumentation // External documentation
-	Examples     map[string]Example     // Request/response examples
-	Servers      []OpenAPIServer        // Operation-specific servers
+	Method        string                 // HTTP method
+	Path          string                 // Route path
+	OperationID   string                 // Unique operation ID
+	Summary       string                 // API summary
+	Description   string                 // API detailed description
+	Tags          []string               // API tag groups
+	Request       interface{}            // Request structure
+	Response      interface{}            // Response structure
+	Params        []Parameter            // Path parameters, query parameters, etc.
+	Handler       http.HandlerFunc       // Standard HTTP handler (fallback)
+	NativeHandler interface{}            // Framework-specific handler (e.g., gin.HandlerFunc, echo.HandlerFunc)
+	Deprecated    bool                   // Whether the API is deprecated
+	Security      []map[string][]string  // Security requirements
+	ExternalDocs  *ExternalDocumentation // External documentation
+	Examples      map[string]Example     // Request/response examples
+	Servers       []OpenAPIServer        // Operation-specific servers
 }
 
 // ValidationRule defines a validation rule for a parameter
@@ -715,9 +716,17 @@ func (api *APIDefinition) WithResponse(resp interface{}) *APIDefinition {
 	return api
 }
 
-// Chain call: set handler
+// WithHandler sets the standard HTTP handler (used as fallback when no native handler is provided)
+// For framework-specific handlers (e.g., gin.HandlerFunc), use WithNativeHandler instead
 func (api *APIDefinition) WithHandler(handler http.HandlerFunc) *APIDefinition {
 	api.Handler = handler
+	return api
+}
+
+// WithNativeHandler sets a framework-specific handler (e.g., gin.HandlerFunc)
+// This will be used in preference to the standard HTTP handler when available
+func (api *APIDefinition) WithNativeHandler(handler interface{}) *APIDefinition {
+	api.NativeHandler = handler
 	return api
 }
 

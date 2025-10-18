@@ -13,6 +13,12 @@ import (
 	"github.com/smartcat999/go-swagger/pkg/api"
 )
 
+// WithGinHandler is a helper function to set a gin.HandlerFunc as the native handler
+// Usage: api.NewAPI(...).WithGinHandler(yourGinHandler)
+func WithGinHandler(apiDef *api.APIDefinition, handler gin.HandlerFunc) *api.APIDefinition {
+	return apiDef.WithNativeHandler(handler)
+}
+
 // APIRouter enhanced route registrar
 type APIRouter struct {
 	engine          *gin.Engine
@@ -113,7 +119,8 @@ func (r *APIRouter) Register(api *api.APIDefinition) error {
 		return fmt.Errorf("api definition cannot be nil")
 	}
 
-	if api.Handler == nil {
+	// Check if we have either a native handler or standard handler
+	if api.NativeHandler == nil && api.Handler == nil {
 		return fmt.Errorf("handler cannot be nil for path: %s", api.Path)
 	}
 
@@ -243,7 +250,18 @@ func (r *APIRouter) Register(api *api.APIDefinition) error {
 		}
 
 		// Call the actual handler
-		api.Handler(c.Writer, c.Request)
+		// Prefer NativeHandler (gin.HandlerFunc) over standard http.HandlerFunc
+		if api.NativeHandler != nil {
+			if ginHandler, ok := api.NativeHandler.(gin.HandlerFunc); ok {
+				ginHandler(c)
+				return
+			}
+		}
+
+		// Fallback to standard HTTP handler
+		if api.Handler != nil {
+			api.Handler(c.Writer, c.Request)
+		}
 	}
 
 	// Register to gin engine
@@ -414,7 +432,7 @@ func (r *APIRouter) SwaggerHandler(c *gin.Context) {
 	c.Header("Cache-Control", "public, max-age=3600") // Cache for 1 hour
 	c.Header("ETag", fmt.Sprintf(`"%x"`, md5.Sum(r.swaggerDoc)))
 
-	c.Data(http.StatusOK, "application/json", r.swaggerDoc)
+	c.Data(http.StatusOK, "application/json; charset=utf-8", r.swaggerDoc)
 }
 
 // BuildOpenAPI builds OpenAPI specification document
