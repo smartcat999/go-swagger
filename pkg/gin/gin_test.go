@@ -202,9 +202,12 @@ func TestGenerateSwagger(t *testing.T) {
 	}
 
 	// Generate swagger
-	err = router.GenerateSwagger()
+	apiDoc, err := router.GenerateSwagger()
 	if err != nil {
 		t.Fatalf("GenerateSwagger failed: %v", err)
+	}
+	if apiDoc == nil {
+		t.Fatal("Expected non-nil OpenAPI document")
 	}
 
 	if !router.generated {
@@ -286,9 +289,12 @@ func TestGenerateSwaggerValidation(t *testing.T) {
 				_ = router.Register(apiDef)
 			}
 
-			err := router.GenerateSwagger()
+			doc, err := router.GenerateSwagger()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateSwagger() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err == nil && doc == nil {
+				t.Error("Expected non-nil document when no error")
 			}
 		})
 	}
@@ -304,7 +310,7 @@ func TestSwaggerHandler(t *testing.T) {
 	apiDef := api.NewAPIDefinition("GET", "/test", "Test").
 		WithHandler(testHandler)
 	_ = router.Register(apiDef)
-	_ = router.GenerateSwagger()
+	_, _ = router.GenerateSwagger()
 
 	// Test swagger handler
 	w := httptest.NewRecorder()
@@ -524,6 +530,6 @@ func BenchmarkGenerateSwagger(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_ = router.GenerateSwagger()
+		_, _ = router.GenerateSwagger()
 	}
 }

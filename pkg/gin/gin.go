@@ -295,24 +295,24 @@ func (r *APIRouter) RegisterGroup(tag string, apis []api.APIDefinition) error {
 	return nil
 }
 
-// GenerateSwagger generates and caches the swagger document
-func (r *APIRouter) GenerateSwagger() error {
+// GenerateSwagger generates and caches the swagger document, returns the generated document
+func (r *APIRouter) GenerateSwagger() (*api.OpenAPIDoc, error) {
 	if r.title == "" {
-		return fmt.Errorf("API title is required")
+		return nil, fmt.Errorf("API title is required")
 	}
 	if r.version == "" {
-		return fmt.Errorf("API version is required")
+		return nil, fmt.Errorf("API version is required")
 	}
 
 	// Build OpenAPI document
 	doc, err := r.BuildOpenAPI()
 	if err != nil {
-		return fmt.Errorf("failed to build OpenAPI document: %w", err)
+		return nil, fmt.Errorf("failed to build OpenAPI document: %w", err)
 	}
 
 	// Validate required fields
 	if len(doc.Paths) == 0 {
-		return fmt.Errorf("no API paths defined")
+		return nil, fmt.Errorf("no API paths defined")
 	}
 
 	// Add default server if none defined
@@ -388,12 +388,12 @@ func (r *APIRouter) GenerateSwagger() error {
 	// Marshal document
 	data, err := json.MarshalIndent(doc, "", "  ")
 	if err != nil {
-		return fmt.Errorf("failed to marshal OpenAPI document: %w", err)
+		return nil, fmt.Errorf("failed to marshal OpenAPI document: %w", err)
 	}
 
 	r.swaggerDoc = data
 	r.generated = true
-	return nil
+	return doc, nil
 }
 
 // generateOperationID generates a unique operation ID based on the path and operation

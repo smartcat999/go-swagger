@@ -70,9 +70,12 @@ func main() {
     router.Register(createUserAPI)
     
     // Generate and cache Swagger documentation
-    if err := router.GenerateSwagger(); err != nil {
+    doc, err := router.GenerateSwagger()
+    if err != nil {
         panic(err)
     }
+    // doc contains the generated OpenAPI document
+    _ = doc
     
     // Register Swagger endpoint
     engine.GET("/swagger.json", router.SwaggerHandler)

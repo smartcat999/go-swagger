@@ -141,7 +141,8 @@ createAPI := api.NewAPIDefinition("POST", "/users", "Create user").
 router.Register(createAPI)
 
 // 生成 Swagger 文档
-router.GenerateSwagger()
+doc, err := router.GenerateSwagger()
+// doc contains the generated OpenAPI document
 
 // 注册 Swagger 端点
 engine.GET("/swagger.json", router.SwaggerHandler)
