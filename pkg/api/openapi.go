@@ -695,6 +695,12 @@ func (api *APIDefinition) WithParamSchema(name, in, description string, required
 	return api
 }
 
+// WithParams sets multiple parameters at once
+func (api *APIDefinition) WithParams(params []Parameter) *APIDefinition {
+	api.Params = append(api.Params, params...)
+	return api
+}
+
 // Helper function to create a validation rule
 func NewValidationRule(ruleType string, value interface{}, message string) ValidationRule {
 	return ValidationRule{

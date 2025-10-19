@@ -435,6 +435,11 @@ func (r *APIRouter) SwaggerHandler(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json; charset=utf-8", r.swaggerDoc)
 }
 
+// GetDefinitions returns all registered API definitions
+func (r *APIRouter) GetDefinitions() []api.APIDefinition {
+	return r.definitions
+}
+
 // BuildOpenAPI builds OpenAPI specification document
 func (r *APIRouter) BuildOpenAPI() (*api.OpenAPIDoc, error) {
 	doc := &api.OpenAPIDoc{
