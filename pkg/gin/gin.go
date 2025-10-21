@@ -252,8 +252,18 @@ func (r *APIRouter) Register(api *api.APIDefinition) error {
 		// Call the actual handler
 		// Prefer NativeHandler (gin.HandlerFunc) over standard http.HandlerFunc
 		if api.NativeHandler != nil {
-			if ginHandler, ok := api.NativeHandler.(gin.HandlerFunc); ok {
-				ginHandler(c)
+			switch h := api.NativeHandler.(type) {
+			case gin.HandlerFunc:
+				h(c)
+				return
+			case func(*gin.Context):
+				gin.HandlerFunc(h)(c)
+				return
+			case http.HandlerFunc:
+				h(c.Writer, c.Request)
+				return
+			case func(http.ResponseWriter, *http.Request):
+				h(c.Writer, c.Request)
 				return
 			}
 		}
@@ -261,6 +271,7 @@ func (r *APIRouter) Register(api *api.APIDefinition) error {
 		// Fallback to standard HTTP handler
 		if api.Handler != nil {
 			api.Handler(c.Writer, c.Request)
+			return
 		}
 	}
 
