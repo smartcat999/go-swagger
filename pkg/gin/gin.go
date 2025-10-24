@@ -227,28 +227,6 @@ func (r *APIRouter) Register(api *api.APIDefinition) error {
 			}
 		}
 
-		// Validate request body if needed
-		if api.Request != nil && (method == http.MethodPost || method == http.MethodPut || method == http.MethodPatch) {
-			contentType := c.GetHeader("Content-Type")
-			if contentType != "" && !strings.HasPrefix(contentType, "application/json") {
-				c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{
-					"error": "Content-Type must be application/json",
-				})
-				return
-			}
-
-			var requestBody interface{}
-			if err := c.ShouldBindJSON(&requestBody); err != nil {
-				c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
-					"error": fmt.Sprintf("invalid request body: %v", err),
-				})
-				return
-			}
-
-			// Note: Request body validation would require schema generation
-			// For now, we'll skip detailed validation and rely on JSON unmarshaling
-		}
-
 		// Call the actual handler
 		// Prefer NativeHandler (gin.HandlerFunc) over standard http.HandlerFunc
 		if api.NativeHandler != nil {
