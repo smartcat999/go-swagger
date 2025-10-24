@@ -701,6 +701,54 @@ func (api *APIDefinition) WithParams(params []Parameter) *APIDefinition {
 	return api
 }
 
+// WithPathParam sets a path parameter
+func (api *APIDefinition) WithPathParam(name, description string, required bool, validations ...ValidationRule) *APIDefinition {
+	api.Params = append(api.Params, Parameter{
+		Name:        name,
+		In:          "path",
+		Required:    required,
+		Description: description,
+		Validations: validations,
+	})
+	return api
+}
+
+// WithQueryParam sets a query parameter
+func (api *APIDefinition) WithQueryParam(name, description string, required bool, validations ...ValidationRule) *APIDefinition {
+	api.Params = append(api.Params, Parameter{
+		Name:        name,
+		In:          "query",
+		Required:    required,
+		Description: description,
+		Validations: validations,
+	})
+	return api
+}
+
+// WithHeaderParam sets a header parameter
+func (api *APIDefinition) WithHeaderParam(name, description string, required bool, validations ...ValidationRule) *APIDefinition {
+	api.Params = append(api.Params, Parameter{
+		Name:        name,
+		In:          "header",
+		Required:    required,
+		Description: description,
+		Validations: validations,
+	})
+	return api
+}
+
+// WithCookieParam sets a cookie parameter
+func (api *APIDefinition) WithCookieParam(name, description string, required bool, validations ...ValidationRule) *APIDefinition {
+	api.Params = append(api.Params, Parameter{
+		Name:        name,
+		In:          "cookie",
+		Required:    required,
+		Description: description,
+		Validations: validations,
+	})
+	return api
+}
+
 // Helper function to create a validation rule
 func NewValidationRule(ruleType string, value interface{}, message string) ValidationRule {
 	return ValidationRule{
