@@ -128,13 +128,33 @@ func TestSafeSchemaFromStruct(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:    "invalid type",
-			input:   "string",
-			wantErr: true,
-		},
-		{
 			name:    "pointer to struct",
 			input:   &User{},
+			wantErr: false,
+		},
+		{
+			name:    "slice of structs",
+			input:   []User{},
+			wantErr: false,
+		},
+		{
+			name:    "slice of pointers to structs",
+			input:   []*User{},
+			wantErr: false,
+		},
+		{
+			name:    "array of structs",
+			input:   [3]User{},
+			wantErr: false,
+		},
+		{
+			name:    "slice of strings",
+			input:   []string{},
+			wantErr: false,
+		},
+		{
+			name:    "slice of integers",
+			input:   []int{},
 			wantErr: false,
 		},
 	}
@@ -148,7 +168,53 @@ func TestSafeSchemaFromStruct(t *testing.T) {
 			if !tt.wantErr && schema == nil {
 				t.Error("Expected schema to be generated")
 			}
+			if !tt.wantErr {
+				t.Logf("Generated schema for %T: %+v", tt.input, schema)
+			}
 		})
+	}
+}
+
+// TestSliceSchemaGeneration tests slice schema generation specifically
+func TestSliceSchemaGeneration(t *testing.T) {
+	// Test slice of structs
+	userSlice := []User{}
+	schema, err := SafeSchemaFromStruct(userSlice)
+	if err != nil {
+		t.Fatalf("Failed to generate schema for slice: %v", err)
+	}
+
+	if schema["type"] != "array" {
+		t.Errorf("Expected type 'array', got %v", schema["type"])
+	}
+
+	items, ok := schema["items"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected items to be a map")
+	}
+
+	if items["type"] != "object" {
+		t.Errorf("Expected items type 'object', got %v", items["type"])
+	}
+
+	// Test slice of strings
+	stringSlice := []string{}
+	schema, err = SafeSchemaFromStruct(stringSlice)
+	if err != nil {
+		t.Fatalf("Failed to generate schema for string slice: %v", err)
+	}
+
+	if schema["type"] != "array" {
+		t.Errorf("Expected type 'array', got %v", schema["type"])
+	}
+
+	items, ok = schema["items"].(map[string]interface{})
+	if !ok {
+		t.Fatal("Expected items to be a map")
+	}
+
+	if items["type"] != "string" {
+		t.Errorf("Expected items type 'string', got %v", items["type"])
 	}
 }
 

@@ -377,16 +377,46 @@ func SafeSchemaFromStruct(v interface{}) (schema map[string]interface{}, err err
 		return nil, &ErrInvalidType{Type: "nil pointer element"}
 	}
 
-	if t.Kind() != reflect.Struct {
-		return nil, &ErrInvalidType{Type: t.String()}
-	}
+	// Handle different types
+	switch t.Kind() {
+	case reflect.Struct:
+		schema, err = SchemaFromStruct(v)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate schema: %w", err)
+		}
+		return schema, nil
 
-	schema, err = SchemaFromStruct(v)
-	if err != nil {
-		return nil, fmt.Errorf("failed to generate schema: %w", err)
-	}
+	case reflect.Slice, reflect.Array:
+		// Handle slice/array types
+		elemType := t.Elem()
+		if elemType == nil {
+			return map[string]interface{}{
+				"type": "array",
+				"items": map[string]interface{}{
+					"type": "object",
+				},
+			}, nil
+		}
 
-	return schema, nil
+		// Generate schema for the element type
+		elemSchema, err := createSchemaFromGoType(elemType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create schema for slice element type %s: %w", elemType.String(), err)
+		}
+
+		return map[string]interface{}{
+			"type":  "array",
+			"items": elemSchema,
+		}, nil
+
+	default:
+		// For other types, try to create schema using createSchemaFromGoType
+		schema, err = createSchemaFromGoType(t)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create schema for type %s: %w", t.String(), err)
+		}
+		return schema, nil
+	}
 }
 
 // Generate schema from struct using reflection
