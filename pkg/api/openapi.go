@@ -29,6 +29,7 @@ type APIDefinition struct {
 	ExternalDocs  *ExternalDocumentation // External documentation
 	Examples      map[string]Example     // Request/response examples
 	Servers       []OpenAPIServer        // Operation-specific servers
+	Metadata      map[string]interface{} // Custom metadata for extensibility (e.g., permissions, roles, etc.)
 }
 
 // ValidationRule defines a validation rule for a parameter
@@ -677,6 +678,7 @@ func NewAPIDefinition(method, path, summary string) *APIDefinition {
 		Examples: make(map[string]Example),
 		Security: make([]map[string][]string, 0),
 		Servers:  make([]OpenAPIServer, 0),
+		Metadata: make(map[string]interface{}),
 	}
 }
 
@@ -851,5 +853,25 @@ func (api *APIDefinition) WithServer(url, description string) *APIDefinition {
 		Description: description,
 	}
 	api.Servers = append(api.Servers, server)
+	return api
+}
+
+// Chain call: set metadata
+func (api *APIDefinition) WithMetadata(key string, value interface{}) *APIDefinition {
+	if api.Metadata == nil {
+		api.Metadata = make(map[string]interface{})
+	}
+	api.Metadata[key] = value
+	return api
+}
+
+// Chain call: set multiple metadata at once
+func (api *APIDefinition) WithMetadataMap(metadata map[string]interface{}) *APIDefinition {
+	if api.Metadata == nil {
+		api.Metadata = make(map[string]interface{})
+	}
+	for k, v := range metadata {
+		api.Metadata[k] = v
+	}
 	return api
 }
