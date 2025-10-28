@@ -13,11 +13,13 @@ import (
 	"github.com/smartcat999/go-swagger/pkg/api"
 )
 
-// PermissionChecker defines a function type for checking route permissions
+// GenericAuthorizer defines an interface for checking route permissions
 // Returns true if access is allowed, false otherwise
 // The context parameter allows access to request information for permission decisions
 // The metadata parameter contains route-specific metadata (e.g., required roles, permissions)
-type PermissionChecker func(ctx interface{}, metadata map[string]interface{}) bool
+type GenericAuthorizer interface {
+	Authorize(ctx interface{}, metadata map[string]interface{}) bool
+}
 
 // WithGinHandler is a helper function to set a gin.HandlerFunc as the native handler
 // Usage: api.NewAPI(...).WithGinHandler(yourGinHandler)
@@ -27,17 +29,17 @@ func WithGinHandler(apiDef *api.APIDefinition, handler gin.HandlerFunc) *api.API
 
 // APIRouter enhanced route registrar
 type APIRouter struct {
-	engine                  *gin.Engine
-	definitions             []api.APIDefinition
-	basePath                string
-	title                   string
-	version                 string
-	description             string
-	swaggerDoc              []byte // Cached swagger document
-	generated               bool   // Whether swagger has been generated
-	securitySchemes         map[string]api.SecurityScheme
-	globalSecurity          []map[string][]string
-	globalPermissionChecker PermissionChecker // Global permission checker for all routes
+	engine           *gin.Engine
+	definitions      []api.APIDefinition
+	basePath         string
+	title            string
+	version          string
+	description      string
+	swaggerDoc       []byte // Cached swagger document
+	generated        bool   // Whether swagger has been generated
+	securitySchemes  map[string]api.SecurityScheme
+	globalSecurity   []map[string][]string
+	globalAuthorizer GenericAuthorizer // Global authorizer for all routes
 }
 
 // NewAPIRouter creates a new API route registrar
@@ -120,10 +122,10 @@ func (r *APIRouter) SetGlobalSecurity(requirements []map[string][]string) {
 	r.globalSecurity = requirements
 }
 
-// SetGlobalPermissionChecker sets a global permission checker for all routes
-// This checker will be called for every route and receives the gin.Context and route metadata
-func (r *APIRouter) SetGlobalPermissionChecker(checker PermissionChecker) {
-	r.globalPermissionChecker = checker
+// SetGlobalAuthorizer sets a global authorizer for all routes
+// This authorizer will be called for every route and receives the gin.Context and route metadata
+func (r *APIRouter) SetGlobalAuthorizer(authorizer GenericAuthorizer) {
+	r.globalAuthorizer = authorizer
 }
 
 // Register registers an API route
@@ -240,10 +242,10 @@ func (r *APIRouter) Register(api *api.APIDefinition) error {
 			}
 		}
 
-		// Check permissions using global permission checker
-		if r.globalPermissionChecker != nil {
-			// Pass gin.Context and route metadata to the permission checker
-			if !r.globalPermissionChecker(c, api.Metadata) {
+		// Check permissions using global authorizer
+		if r.globalAuthorizer != nil {
+			// Pass gin.Context and route metadata to the authorizer
+			if !r.globalAuthorizer.Authorize(c, api.Metadata) {
 				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 					"error": "Access denied",
 				})
