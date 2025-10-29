@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"context"
 
 	"github.com/gin-gonic/gin"
 
@@ -18,7 +19,7 @@ import (
 // The context parameter allows access to request information for permission decisions
 // The metadata parameter contains route-specific metadata (e.g., required roles, permissions)
 type GenericAuthorizer interface {
-	Authorize(ctx interface{}, metadata map[string]interface{}) bool
+	Authorize(ctx context.Context, metadata map[string]interface{}) bool
 }
 
 // WithGinHandler is a helper function to set a gin.HandlerFunc as the native handler
