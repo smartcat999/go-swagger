@@ -1,13 +1,13 @@
 package gin
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
 	"strings"
-	"context"
 
 	"github.com/gin-gonic/gin"
 
@@ -281,7 +281,9 @@ func (r *APIRouter) Register(api *api.APIDefinition) error {
 	}
 
 	// Register to gin engine
-	fullPath := fmt.Sprintf("%s%s", r.basePath, api.Path)
+	// Convert OpenAPI path format ({param}) to Gin format (:param)
+	ginPath := convertOpenAPIPathToGin(api.Path)
+	fullPath := fmt.Sprintf("%s%s", r.basePath, ginPath)
 	r.engine.Handle(method, fullPath, handler)
 
 	// Save API definition information
@@ -410,6 +412,15 @@ func (r *APIRouter) GenerateSwagger() (*api.OpenAPIDoc, error) {
 	r.swaggerDoc = data
 	r.generated = true
 	return doc, nil
+}
+
+// convertOpenAPIPathToGin converts OpenAPI path format to Gin router format
+// Example: /user/{name} -> /user/:name
+// Example: /users/{id}/posts/{postId} -> /users/:id/posts/:postId
+func convertOpenAPIPathToGin(openAPIPath string) string {
+	// Replace {param} with :param using regex
+	ginPathRegex := regexp.MustCompile(`\{([^}]+)\}`)
+	return ginPathRegex.ReplaceAllString(openAPIPath, ":$1")
 }
 
 // generateOperationID generates a unique operation ID based on the path and operation

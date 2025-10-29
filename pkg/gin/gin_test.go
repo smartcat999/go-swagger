@@ -477,7 +477,7 @@ func TestRegisterGroup(t *testing.T) {
 	apis := []api.APIDefinition{
 		*api.NewAPIDefinition("GET", "/users", "List users").WithHandler(testHandler),
 		*api.NewAPIDefinition("POST", "/users", "Create user").WithHandler(testHandler),
-		*api.NewAPIDefinition("GET", "/users/:id", "Get user").WithHandler(testHandler),
+		*api.NewAPIDefinition("GET", "/users/{id}", "Get user").WithHandler(testHandler),
 	}
 
 	err := router.RegisterGroup("users", apis)
@@ -494,6 +494,140 @@ func TestRegisterGroup(t *testing.T) {
 		if len(def.Tags) == 0 || def.Tags[0] != "users" {
 			t.Error("Expected all APIs to have 'users' tag")
 		}
+	}
+}
+
+// TestOpenAPIPathConversion tests conversion from OpenAPI path format to Gin format
+func TestOpenAPIPathConversion(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	tests := []struct {
+		name          string
+		openAPIPath   string
+		handler       gin.HandlerFunc
+		testURL       string
+		wantStatus    int
+		validateParam func(t *testing.T, body string)
+	}{
+		{
+			name:        "simple path parameter",
+			openAPIPath: "/user/{name}",
+			handler: func(c *gin.Context) {
+				name := c.Param("name")
+				c.JSON(http.StatusOK, gin.H{"name": name})
+			},
+			testURL:    "/api/user/john",
+			wantStatus: http.StatusOK,
+			validateParam: func(t *testing.T, body string) {
+				if !strings.Contains(body, "john") {
+					t.Errorf("Expected response to contain 'john', got %s", body)
+				}
+			},
+		},
+		{
+			name:        "multiple path parameters",
+			openAPIPath: "/users/{id}/posts/{postId}",
+			handler: func(c *gin.Context) {
+				id := c.Param("id")
+				postId := c.Param("postId")
+				c.JSON(http.StatusOK, gin.H{"id": id, "postId": postId})
+			},
+			testURL:    "/api/users/123/posts/456",
+			wantStatus: http.StatusOK,
+			validateParam: func(t *testing.T, body string) {
+				if !strings.Contains(body, "123") || !strings.Contains(body, "456") {
+					t.Errorf("Expected response to contain '123' and '456', got %s", body)
+				}
+			},
+		},
+		{
+			name:        "no path parameters",
+			openAPIPath: "/users",
+			handler: func(c *gin.Context) {
+				c.JSON(http.StatusOK, gin.H{"message": "success"})
+			},
+			testURL:    "/api/users",
+			wantStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a new engine for each test to avoid route conflicts
+			engine := gin.New()
+			router := NewAPIRouter(engine, "/api", "Test API", "1.0.0", "Test")
+
+			apiDef := api.NewAPIDefinition("GET", tt.openAPIPath, "Test").
+				WithNativeHandler(tt.handler)
+
+			// Add path parameters based on the path
+			if strings.Contains(tt.openAPIPath, "{name}") {
+				apiDef = apiDef.WithPathParam("name", "User name", false)
+			}
+			if strings.Contains(tt.openAPIPath, "{id}") {
+				apiDef = apiDef.WithPathParam("id", "User ID", false)
+			}
+			if strings.Contains(tt.openAPIPath, "{postId}") {
+				apiDef = apiDef.WithPathParam("postId", "Post ID", false)
+			}
+
+			err := router.Register(apiDef)
+			if err != nil {
+				t.Fatalf("Register failed: %v", err)
+			}
+
+			// Test the route
+			w := httptest.NewRecorder()
+			req := httptest.NewRequest("GET", tt.testURL, nil)
+			engine.ServeHTTP(w, req)
+
+			if w.Code != tt.wantStatus {
+				t.Errorf("Expected status %d, got %d. Body: %s", tt.wantStatus, w.Code, w.Body.String())
+			}
+
+			if tt.validateParam != nil {
+				tt.validateParam(t, w.Body.String())
+			}
+		})
+	}
+}
+
+// TestConvertOpenAPIPathToGin tests the path conversion function directly
+func TestConvertOpenAPIPathToGin(t *testing.T) {
+	tests := []struct {
+		name        string
+		openAPIPath string
+		want        string
+	}{
+		{
+			name:        "simple parameter",
+			openAPIPath: "/user/{name}",
+			want:        "/user/:name",
+		},
+		{
+			name:        "multiple parameters",
+			openAPIPath: "/users/{id}/posts/{postId}",
+			want:        "/users/:id/posts/:postId",
+		},
+		{
+			name:        "no parameters",
+			openAPIPath: "/users",
+			want:        "/users",
+		},
+		{
+			name:        "parameter at start",
+			openAPIPath: "/{version}/users",
+			want:        "/:version/users",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := convertOpenAPIPathToGin(tt.openAPIPath)
+			if got != tt.want {
+				t.Errorf("convertOpenAPIPathToGin(%q) = %q, want %q", tt.openAPIPath, got, tt.want)
+			}
+		})
 	}
 }
 
